@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Integrity Monitor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a0e1a; color: #e0e0e0; font-family: 'Courier New', monospace; }
+        header { background: #0d1117; border-bottom: 1px solid #00ff88; padding: 16px 32px; display: flex; align-items: center; gap: 12px; }
+        header h1 { color: #00ff88; font-size: 20px; letter-spacing: 2px; }
+        .dot { width: 10px; height: 10px; background: #00ff88; border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 24px 32px; }
+        .stat-card { background: #0d1117; border: 1px solid #1e2a3a; border-radius: 8px; padding: 20px; text-align: center; }
+        .stat-card .number { font-size: 40px; font-weight: bold; margin-bottom: 8px; }
+        .stat-card .label { color: #888; font-size: 12px; letter-spacing: 1px; }
+        .total .number { color: #00ff88; }
+        .critical .number { color: #ff4444; }
+        .high .number { color: #ff8800; }
+        .section { padding: 0 32px 32px; }
+        .section h2 { color: #00ff88; font-size: 14px; letter-spacing: 2px; margin-bottom: 16px; border-bottom: 1px solid #1e2a3a; padding-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: #0d1117; color: #888; font-weight: normal; letter-spacing: 1px; padding: 10px 12px; text-align: left; border-bottom: 1px solid #1e2a3a; }
+        td { padding: 10px 12px; border-bottom: 1px solid #1a1a2e; word-break: break-all; }
+        tr:hover td { background: #0d1117; }
+        .badge { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .CRITICAL { background: #ff444422; color: #ff4444; border: 1px solid #ff4444; }
+        .HIGH { background: #ff880022; color: #ff8800; border: 1px solid #ff8800; }
+        .FILE_MODIFIED { color: #ff4444; }
+        .FILE_CREATED { color: #00ff88; }
+        .FILE_DELETED { color: #ff8800; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="dot"></div>
+        <h1>FILE INTEGRITY MONITOR — LIVE DASHBOARD</h1>
+    </header>
+
+    <div class="stats">
+        <div class="stat-card total">
+            <div class="number" id="total">0</div>
+            <div class="label">TOTAL EVENTS</div>
+        </div>
+        <div class="stat-card critical">
+            <div class="number" id="critical">0</div>
+            <div class="label">CRITICAL</div>
+        </div>
+        <div class="stat-card high">
+            <div class="number" id="high">0</div>
+            <div class="label">HIGH</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>RECENT EVENTS</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>TIMESTAMP</th>
+                    <th>TYPE</th>
+                    <th>SEVERITY</th>
+                    <th>FILE</th>
+                    <th>DESCRIPTION</th>
+                </tr>
+            </thead>
+            <tbody id="events-table"></tbody>
+        </table>
+    </div>
+
+    <script>
+        async function loadStats() {
+            const res = await fetch('/api/stats');
+            const data = await res.json();
+            document.getElementById('total').textContent = data.total;
+            document.getElementById('critical').textContent = data.critical;
+            document.getElementById('high').textContent = data.high;
+        }
+
+        async function loadEvents() {
+            const res = await fetch('/api/events');
+            const events = await res.json();
+            const tbody = document.getElementById('events-table');
+            tbody.innerHTML = events.map(e => `
+                <tr>
+                    <td>${e.timestamp}</td>
+                    <td class="${e.event_type}">${e.event_type}</td>
+                    <td><span class="badge ${e.severity}">${e.severity}</span></td>
+                    <td>${e.filepath.split('\\').pop()}</td>
+                    <td>${e.description}</td>
+                </tr>
+            `).join('');
+        }
+
+        function refresh() {
+            loadStats();
+            loadEvents();
+        }
+
+        refresh();
+        setInterval(refresh, 3000);
+    </script>
+</body>
+</html>
